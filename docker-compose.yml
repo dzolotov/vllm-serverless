@@ -1,0 +1,55 @@
+services:
+  qwen3:
+    build:
+      context: .
+      args:
+        MODEL_ID: ${MODEL_ID:-Qwen/Qwen3-32B-FP8}
+        HF_TOKEN: ${HF_TOKEN:-}
+    image: qwen3-serverless:latest
+    ports:
+      - "${VLLM_PORT:-8000}:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - model-cache:/model
+      - vllm-cache:/opt/vllm_cache
+    environment:
+      VLLM_CACHE_ROOT: /opt/vllm_cache
+    command:
+      - "--model"
+      - "/model"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--max-model-len"
+      - "${MAX_MODEL_LEN:-32768}"
+      - "--gpu-memory-utilization"
+      - "${GPU_MEMORY_UTILIZATION:-0.95}"
+      - "--max-num-seqs"
+      - "${MAX_NUM_SEQS:-32}"
+      - "--tensor-parallel-size"
+      - "${TENSOR_PARALLEL_SIZE:-1}"
+      - "--served-model-name"
+      - "qwen3"
+      - "--enable-reasoning"
+      - "--reasoning-parser"
+      - "deepseek_r1"
+      - "--enable-prefix-caching"
+      - "--disable-log-requests"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  model-cache:
+  vllm-cache:

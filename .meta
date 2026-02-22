@@ -1,0 +1,31 @@
+project:
+  name: "Qwen Serverless"
+  id: "qwen-serverless"
+obsidian:
+  vault_path: "/Users/dzolotov/Obsidian"
+  session_folder: "Work/ClaudeSessions"
+type: docker
+tags: [docker, vllm, qwen3, serverless, inference]
+logging:
+  session_start: true
+  user_prompts: true
+  post_tool_events: true
+  file_changes: true
+  bash_output: true
+  tool_failures: true
+  subagents: true
+  compact_events: true
+  thinking: true
+  summary_on_session_end: true
+knowledge_extraction:
+  enabled: true
+  min_tool_calls: 8
+  min_duration_min: 3
+  knowledge_folder: "Work/ClaudeOracle"
+  chroma_path: "~/.claude/knowledge/chroma"
+  embed_model: "nomic-embed-text"
+  eval_model: "qwen2.5:32b"
+  similarity_threshold: 0.83
+  global_collection: true
+oracle_advisor:
+  mode: postmoderation
