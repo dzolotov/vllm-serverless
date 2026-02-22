@@ -26,46 +26,8 @@ ENV GPU_MEMORY_UTILIZATION=0.95
 ENV MAX_NUM_SEQS=32
 ENV TENSOR_PARALLEL_SIZE=1
 
-# ── прогрев CUDA-графов при сборке ──────────────────────────────────────────
-# Запускаем vLLM в режиме одного прогревочного шага — компилирует CUDA-графы
-# и сохраняет кэш torch.compile в /opt/vllm_cache.
-# При старте контейнера кэш подхватывается без перекомпиляции.
-ENV VLLM_CACHE_ROOT=/opt/vllm_cache
-RUN --mount=type=cache,target=/root/.cache/huggingface \
-    mkdir -p ${VLLM_CACHE_ROOT} && \
-    python -c "
-import os, torch
-from vllm import LLM, SamplingParams
-from vllm.transformers_utils.tokenizer import get_tokenizer
-
-llm = LLM(
-    model=os.environ['MODEL_PATH'],
-    max_model_len=int(os.environ['MAX_MODEL_LEN']),
-    gpu_memory_utilization=float(os.environ['GPU_MEMORY_UTILIZATION']),
-    tensor_parallel_size=int(os.environ['TENSOR_PARALLEL_SIZE']),
-    enforce_eager=False,          # строим CUDA-графы
-    max_num_seqs=int(os.environ['MAX_NUM_SEQS']),
-    download_dir=os.environ['MODEL_PATH'],
-    load_format='auto',
-    enable_prefix_caching=True,   # соответствует серверному флагу
-)
-
-# прогрев: thinking=True соответствует --enable-reasoning / --reasoning-parser deepseek_r1
-# токенизируем с chat_template чтобы прогреть тот же путь, что и на сервере
-tokenizer = get_tokenizer(os.environ['MODEL_PATH'])
-messages = [{'role': 'user', 'content': 'Hello'}]
-prompt = tokenizer.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True,
-    enable_thinking=True,         # активирует <think>...</think> путь
-)
-params = SamplingParams(temperature=0, max_tokens=1)
-llm.generate([prompt], params)
-print('Warmup complete')
-del llm
-torch.cuda.empty_cache()
-" || echo "GPU not available during build — skipping warmup"
+# warmup намеренно не делается — образ стартует быстро,
+# прогрев CUDA-графов происходит на первом реальном запросе на GPU-машине
 
 # ── entrypoint ───────────────────────────────────────────────────────────────
 EXPOSE ${VLLM_PORT}
