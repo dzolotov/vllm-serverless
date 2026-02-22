@@ -103,7 +103,8 @@ class RunPodLifecycle:
             ports = (data["data"]["pod"].get("runtime") or {}).get("ports") or []
             port = next((p for p in ports if p["privatePort"] == 8000), None)
             if port:
-                endpoint = f"http://{port['ip']}:{port['publicPort']}"
+                # RunPod proxy URL — доступен снаружи без VPN
+                endpoint = f"https://{self.pod_id}-8000.proxy.runpod.net"
                 log.info(f"[runpod] endpoint ready: {endpoint}")
                 return endpoint
             log.debug("[runpod] waiting for port 8000...")
